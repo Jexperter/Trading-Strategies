@@ -1,0 +1,223 @@
+import pandas as pd
+from binance.client import Client
+import matplotlib.pyplot as plt
+import os
+import mplfinance as mpf
+import numpy as np
+
+# Define the date variable
+TRADE_DATE = '2023-02-17'
+
+# Initialize Binance Client (use your API key and secret)
+api_key = os.getenv('API_KEY_BINANCE')
+api_secret = os.getenv('API_SECRET_BINANCE')
+client = Client(api_key, api_secret)
+
+
+# Fetch OHLCV data from Binance
+def fetch_ohlcv_data(symbol, interval, start_str, end_str):
+    klines = client.get_historical_klines(symbol, interval, start_str, end_str)
+    
+    # Convert data to DataFrame
+    ohlcv_data = pd.DataFrame(klines, columns=[
+        'Open Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Close Time', 
+        'Quote Asset Volume', 'Number of Trades', 'Taker Buy Base Asset Volume', 
+        'Taker Buy Quote Asset Volume', 'Ignore'
+    ])
+    
+    # Convert to proper datetime and numeric types
+    ohlcv_data['Open Time'] = pd.to_datetime(ohlcv_data['Open Time'], unit='ms')
+    ohlcv_data['Open Time'] = ohlcv_data['Open Time'].dt.floor('T')  # Floor to minute, ignoring seconds
+    ohlcv_data.set_index('Open Time', inplace=True)
+    ohlcv_data[['Open', 'High', 'Low', 'Close', 'Volume']] = ohlcv_data[['Open', 'High', 'Low', 'Close', 'Volume']].astype(float)
+    
+    return ohlcv_data
+
+# Visualize trades and benchmark on the chart
+def visualize_trades(ohlcv_data, trades_df, date):
+    # Filter OHLCV data for the specific date
+    ohlcv_data_filtered = ohlcv_data.loc[date]
+
+    # Create markers for long and short trades
+    long_trades = trades_df[trades_df['Order Type'] == 'long']
+    short_trades = trades_df[trades_df['Order Type'] == 'short']
+
+    # Extract entry and exit points for trades
+    entry_exit_pairs = trades_df[['Entry Time', 'Exit Time', 'Order Type', 'Entry Price']]
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    mpf.plot(
+        ohlcv_data_filtered,
+        type='candle',
+        style='charles',
+        ax=ax,
+        ylabel='Price',
+        warn_too_much_data=500
+    )
+
+    # Plot the trades and draw arrows for entry and exit
+    for idx, trade in entry_exit_pairs.iterrows():
+        entry_time = trade['Entry Time']
+        exit_time = trade['Exit Time']
+        order_type = trade['Order Type']
+        entry_price = trade['Entry Price']
+        
+        entry_idx = ohlcv_data_filtered.index.get_loc(entry_time)
+        exit_idx = ohlcv_data_filtered.index.get_loc(exit_time)
+        
+        # Get the prices for entry and exit
+        entry_price = ohlcv_data_filtered.iloc[entry_idx]['Close']
+        exit_price = ohlcv_data_filtered.iloc[exit_idx]['Close']
+        
+        color = 'g' if order_type == 'long' else 'r'
+        marker = '^' if order_type == 'long' else 'v'
+
+        # Plot entry point
+        ax.scatter(
+            entry_idx,
+            entry_price,
+            marker=marker,
+            color=color,
+            s=100,
+            label=f'{order_type.capitalize()} Entry'
+        )
+
+        # Plot exit point
+        ax.scatter(
+            exit_idx,
+            exit_price,
+            marker=marker,
+            color='black',
+            s=100,
+            label=f'{order_type.capitalize()} Exit'
+        )
+
+        # Draw a dotted line between entry and exit
+        ax.plot([entry_idx, exit_idx], [entry_price, exit_price], linestyle='--', color=color)
+
+    # Calculate and display trade statistics (wins, losses)
+    total_trades = len(trades_df)
+    wins = len(trades_df[trades_df['Win'] == True])
+    losses = len(trades_df[trades_df['Win'] == False])
+
+    # Add benchmark summary to the chart
+    benchmark_text = (
+        f'Trades: {total_trades}\n'
+        f'Wins: {wins}\n'
+        f'Losses: {losses}'
+    )
+    ax.text(
+        0.01, 0.95, benchmark_text,
+        transform=ax.transAxes, fontsize=12,
+        verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5)
+    )
+
+    plt.legend()
+    plt.title(f'Trades and Entry/Exit Points for {date}')
+    plt.show()
+
+# Main logic to process liquidation data and check conditions
+def main():
+    # Load liquidation data
+    liquidation_data = pd.read_csv(
+        r'C:\Users\Jesann\Documents\trading\history data file\liq data\BTCUSDT (02.02.2023 to 13.03.2023) liq data.csv',
+        parse_dates=['Datetime'],
+        dayfirst=True  # Ensure day first for European date format
+    )
+    
+    # Floor liquidation time to minutes (ignoring seconds)
+    liquidation_data['Datetime'] = liquidation_data['Datetime'].dt.floor('T')
+
+    # Fetch OHLCV data from Binance
+    ohlcv_data = fetch_ohlcv_data('BTCUSDT', '1m', '2023-02-03', '2023-03-13')
+
+    # Filter liquidation data for the specified date
+    liquidation_data_filtered = liquidation_data[
+        liquidation_data['Datetime'].dt.date == pd.to_datetime(TRADE_DATE).date()
+    ]
+
+    # Prepare results list
+    results = []
+    open_trade = None  # Track the currently open trade
+
+    # Iterate through each liquidation event and check conditions
+    for index, liquidation in liquidation_data_filtered.iterrows():
+        liquidation_time = liquidation['Datetime']
+        liquidation_time = pd.to_datetime(liquidation_time).floor('T')
+
+        # Get the liquidation candle
+        if liquidation_time in ohlcv_data.index:
+            liquidation_candle = ohlcv_data.loc[liquidation_time]
+            next_candle_time = liquidation_time + pd.DateOffset(minutes=1)
+
+            if open_trade:
+                # Close the trade if opposing liquidation happens
+                if (liquidation['Order Type'] != open_trade['Order Type']):
+                    open_trade['Exit Time'] = liquidation_time
+                    open_trade['Exit Price'] = ohlcv_data.loc[liquidation_time]['Close']
+                    open_trade['Win'] = True  # Win, since trade closed at opposing liquidation
+                    results.append(open_trade)
+                    open_trade = None  # Close the trade
+
+            # Check for conditions to open a new trade (use the next candle close as the entry)
+            if next_candle_time in ohlcv_data.index:
+                next_candle = ohlcv_data.loc[next_candle_time]
+                order_type = liquidation['Order Type']
+                
+                if (order_type == 'short' and
+                    next_candle['Close'] < next_candle['Open'] and
+                    next_candle['Volume'] < liquidation_candle['Volume'] and
+                    next_candle['Close'] < liquidation_candle['Open']):
+                    
+                    # Short trade: set stop loss at high of liquidation candle
+                    stop_loss = liquidation_candle['High']
+                    open_trade = {
+                        'Order Type': 'short',
+                        'Entry Time': next_candle_time,  # Entry is at next candle
+                        'Entry Price': next_candle['Close'],
+                        'Stop Loss': stop_loss,
+                        'Win': False  # Assume loss unless it's proven otherwise
+                    }
+                    
+                elif (order_type == 'long' and
+                      next_candle['Close'] > next_candle['Open'] and
+                      next_candle['Volume'] < liquidation_candle['Volume'] and
+                      next_candle['Close'] > liquidation_candle['Open']):
+                    
+                    # Long trade: set stop loss at low of liquidation candle
+                    stop_loss = liquidation_candle['Low']
+                    open_trade = {
+                        'Order Type': 'long',
+                        'Entry Time': next_candle_time,  # Entry is at next candle
+                        'Entry Price': next_candle['Close'],
+                        'Stop Loss': stop_loss,
+                        'Win': False  # Assume loss unless it's proven otherwise
+                    }
+
+        # Check if open trade hits stop loss in subsequent candles until next liquidation
+        if open_trade:
+            next_liquidation_idx = liquidation_data_filtered.index[liquidation_data_filtered.index > index].min()
+            if pd.isna(next_liquidation_idx):
+                next_liquidation_time = ohlcv_data.index[-1]  # If no more liquidations, end of data
+            else:
+                next_liquidation_time = liquidation_data_filtered.loc[next_liquidation_idx]['Datetime']
+
+            # Check each candle after the trade entry till next liquidation
+            for idx, row in ohlcv_data.loc[open_trade['Entry Time']:next_liquidation_time].iterrows():
+                if (open_trade['Order Type'] == 'long' and row['Low'] <= open_trade['Stop Loss']) or \
+                   (open_trade['Order Type'] == 'short' and row['High'] >= open_trade['Stop Loss']):
+                    # Stop loss hit
+                    open_trade['Exit Time'] = idx
+                    open_trade['Exit Price'] = row['Close']
+                    open_trade['Win'] = False
+                    results.append(open_trade)
+                    open_trade = None
+                    break
+
+    # Convert results to DataFrame and visualize trades
+    trades_df = pd.DataFrame(results)
+    visualize_trades(ohlcv_data, trades_df, TRADE_DATE)
+
+# Run the main logic
+if __name__ == "__main__":
+    main()
