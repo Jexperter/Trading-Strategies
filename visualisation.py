@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 from backtesting_script import fetch_ohlcv_data, backtest_all_trades
+from equity_curve import plot_equity_curve
 
 def plot_trades_with_plotly(ohlcv_data, trades_df):
     # Create a candlestick chart
@@ -66,10 +67,10 @@ if __name__ == "__main__":
     ohlcv_data = fetch_ohlcv_data('BTCUSDT', '1m', start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
 
     # Run backtest to get both trades_df and equity_history
-    trades_df, equity_history = backtest_all_trades(start_date, end_date)
+    trades_df, equity, equity_history, period_return = backtest_all_trades(start_date, end_date)
 
     # Pass trades_df to the plotting function
     plot_trades_with_plotly(ohlcv_data, trades_df)
 
     # Optionally, you can plot the equity curve here if desired
-    # plot_equity_curve(equity_history)
+    plot_equity_curve(equity_history)

@@ -144,7 +144,9 @@ def backtest_all_trades(start_date, end_date):
     # Convert all results to DataFrame
     trades_df = pd.DataFrame(all_results)
 
-    # Print details of each trade at the start
+    '''
+    # Print details of each trade at the start 
+    # only use it when testing 
     print("\n--- Trade Details ---")
     for idx, trade in trades_df.iterrows():
         print(f"Trade {idx+1}:")
@@ -158,6 +160,7 @@ def backtest_all_trades(start_date, end_date):
         print(f"  Return (%): {trade['Return (%)']:.2f}")
         print(f"  Equity Before: {trade['Equity Before']:.2f}")
         print(f"  Equity After: {trade['Equity After']:.2f}\n")
+    '''
 
     total_return_percentage = (equity - starting_equity) / starting_equity * 100
     buy_and_hold_return_percentage = (ohlcv_data.iloc[-1]['Close'] - ohlcv_data.iloc[0]['Close']) / ohlcv_data.iloc[0]['Close'] * 100
@@ -178,7 +181,6 @@ def backtest_all_trades(start_date, end_date):
     # Risk-free rate (annualized)
     risk_free_rate = 0.0
 
-    # Sharpe Ratio (with 5% risk-free rate)
     sharpe_ratio = (annualized_return - risk_free_rate) / annualized_volatility
 
     # Sortino Ratio (using only negative returns for downside risk)
@@ -202,9 +204,6 @@ def backtest_all_trades(start_date, end_date):
     # Calmar Ratio (annualized return divided by max drawdown)
     calmar_ratio = annualized_return / max_drawdown
 
-    # Store max drawdown and avg drawdown (converted to percentage)
-    #max_drawdown_percentage = max_drawdown
-    #avg_drawdown_percentage = avg_drawdown
 
     # Calculate period return (final equity / starting equity)
     period_return = (equity / starting_equity) - 1
@@ -219,15 +218,17 @@ def backtest_all_trades(start_date, end_date):
     print(f"Total Return (%): {total_return_percentage:.2f}%")
     print(f"Buy and Hold Return (%): {buy_and_hold_return_percentage:.2f}%")
     print(f"Exposure (%): {exposure_percentage:.2f}%")
-    print(f"Max Drawdown (%): {max_drawdown_percentage:.2f}%")
-    print(f"Avg Drawdown (%): {avg_drawdown_percentage:.2f}%")
+    print(f"Max Drawdown (%): -{max_drawdown_percentage:.2f}%")
+    print(f"Avg Drawdown (%): -{avg_drawdown_percentage:.2f}%")
+    '''
+    #Work in progress below needed
     print(f"Annualized Return (%): {annualized_return * 100:.2f}%")
     print(f"Annualized Volatility (%): {annualized_volatility * 100:.2f}%")
     print(f"Sharpe Ratio: {sharpe_ratio:.2f}")
     print(f"Sortino Ratio: {sortino_ratio:.2f}")
     print(f"Calmar Ratio: {calmar_ratio:.2f}")
+    '''
     print(f"Equity Peak: {equity_peak:.2f}")
-    print(f"Period Return: {period_return * 100:.2f}%")
     
     return trades_df, equity, equity_history, period_return
 
