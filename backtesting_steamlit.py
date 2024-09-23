@@ -34,7 +34,7 @@ def fetch_ohlcv_data(symbol, interval, start_str, end_str):
 def backtest_all_trades(start_date, end_date, timeframe, starting_equity):
     # Load liquidation data
     liquidation_data = pd.read_csv(
-        r'C:\Users\Jesann\Documents\trading\history data file\liq data\BTCUSDT (02.02.2023 to 13.03.2023) liq data.csv',
+        'BTCUSDT (02.02.2023 to 13.03.2023) liq data.csv',
         parse_dates=['Datetime'],
         dayfirst=True  # Ensure day first for European date format
     )
