@@ -238,8 +238,15 @@ starting_equity = st.number_input("Enter Starting Equity (Minimum $100,000)", mi
 
 # Backtest button
 if st.button('Run Backtest'):
+    # Perform the backtest and get the results
     trades_df, final_equity, equity_history, total_return_percentage = backtest_all_trades(start_date, end_date, Client.KLINE_INTERVAL_1MINUTE, starting_equity)
     
-    plot_trades_with_plotly(fetch_ohlcv_data('BTCUSDT_1m_02_Feb,_2023_to_13_Mar,_2023.csv'))
+    # Fetch OHLCV data for plotting
+    ohlcv_data = fetch_ohlcv_data('BTCUSDT_1m_02_Feb,_2023_to_13_Mar,_2023.csv')
+    
+    # Plot trades using Plotly
+    plot_trades_with_plotly(ohlcv_data, trades_df)
 
+    # Plot the equity curve
     plot_equity_curve(equity_history)
+
