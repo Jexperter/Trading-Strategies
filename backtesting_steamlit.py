@@ -10,8 +10,9 @@ import streamlit as st
 # Fetch OHLCV data from Binance
 def fetch_ohlcv_data(file_path):
     # Load the CSV data
-    ohlcv_data = pd.read_csv(file_path, parse_dates=['Date'], dayfirst=True)
+    ohlcv_data = pd.read_csv(file_path)
     
+    ohlcv_data['Date'] = pd.to_datetime(ohlcv_data['Date'])
     # Set the 'Date' column as the index
     ohlcv_data.set_index('Date', inplace=True)
 
