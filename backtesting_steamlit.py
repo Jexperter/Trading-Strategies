@@ -12,22 +12,19 @@ api_secret = st.secrets["general"]["API_SECRET_BINANCE"]
 client = Client(api_key, api_secret)
 
 # Fetch OHLCV data from Binance
-def fetch_ohlcv_data(symbol, interval, start_str, end_str):
-    klines = client.get_historical_klines(symbol, interval, start_str, end_str)
+def fetch_ohlcv_data(file_path):
+    # Load the CSV data
+    ohlcv_data = pd.read_csv(file_path, parse_dates=['Date'], dayfirst=True)
     
-    # Convert data to DataFrame
-    ohlcv_data = pd.DataFrame(klines, columns=[
-        'Open Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Close Time', 
-        'Quote Asset Volume', 'Number of Trades', 'Taker Buy Base Asset Volume', 
-        'Taker Buy Quote Asset Volume', 'Ignore'
-    ])
-    
-    # Convert to proper datetime and numeric types
-    ohlcv_data['Open Time'] = pd.to_datetime(ohlcv_data['Open Time'], unit='ms')
-    ohlcv_data['Open Time'] = ohlcv_data['Open Time'].dt.floor('T')  # Floor to minute, ignoring seconds
-    ohlcv_data.set_index('Open Time', inplace=True)
+    # Set the 'Date' column as the index
+    ohlcv_data.set_index('Date', inplace=True)
+
+    # Convert the relevant columns to numeric types
     ohlcv_data[['Open', 'High', 'Low', 'Close', 'Volume']] = ohlcv_data[['Open', 'High', 'Low', 'Close', 'Volume']].astype(float)
-    
+
+    # Floor the index to minute precision (ignoring seconds)
+    ohlcv_data.index = ohlcv_data.index.floor('T')
+
     return ohlcv_data
 
 # Main logic to process liquidation data and check conditions
@@ -53,7 +50,7 @@ def backtest_all_trades(start_date, end_date, timeframe, starting_equity):
     liquidation_data['Datetime'] = liquidation_data['Datetime'].dt.floor('T')
 
     # Fetch OHLCV data from Binance for the specified period and timeframe
-    ohlcv_data = fetch_ohlcv_data('BTCUSDT', timeframe, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+    ohlcv_data = fetch_ohlcv_data('BTCUSDT_1m_02_Feb,_2023_to_13_Mar,_2023.csv')
 
     # Initialize equity
     equity = starting_equity
