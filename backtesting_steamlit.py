@@ -22,6 +22,8 @@ def fetch_ohlcv_data(file_path):
     # Floor the index to minute precision (ignoring seconds)
     ohlcv_data.index = ohlcv_data.index.floor('min')
 
+    ohlcv_data = ohlcv_data[(ohlcv_data.index >= start_date) & (ohlcv_data.index <= end_date)]
+
     return ohlcv_data
 
 # Main logic to process liquidation data and check conditions
@@ -140,7 +142,6 @@ def backtest_all_trades(start_date, end_date, timeframe, starting_equity):
     
     total_return_percentage = (equity - starting_equity) / starting_equity * 100
     buy_and_hold_return_percentage = (ohlcv_data.iloc[-1]['Close'] - ohlcv_data.iloc[0]['Close']) / ohlcv_data.iloc[0]['Close'] * 100
-    exposure_percentage = (len(trades_df) / len(ohlcv_data)) * 100
 
     # Final summary
     st.write(f"Number of Trades: {num_trades}")
@@ -222,16 +223,17 @@ st.title('Liquidation-Based Backtesting Strategy')
 st.write("""
 ## Strategy Description
 This strategy takes trades based on liquidation data. It opens trades after a certain amount of liquidation occurs and closes when the opposite liquidation occurs. 
-For testing purposes, i have a small sample of liquidation data.
+For testing purposes, I have a small sample of liquidation data.
 """)
 
 # Set the minimum and maximum dates for selection
 min_date = datetime.date(2023, 2, 2)
 max_date = datetime.date(2023, 3, 13)
+example_date = datetime.date(2023, 2, 12)
 
 # Date input from user with restrictions
 start_date = st.date_input("Select Start Date", min_date, min_value=min_date, max_value=max_date)
-end_date = st.date_input("Select End Date", max_date, min_value=min_date, max_value=max_date)
+end_date = st.date_input("Select End Date", example_date, min_value=min_date, max_value=max_date)
 
 # Equity input from user (minimum $100,000)
 starting_equity = st.number_input("Enter Starting Equity (Minimum $100,000)", min_value=100000.0, value=100000.0)
