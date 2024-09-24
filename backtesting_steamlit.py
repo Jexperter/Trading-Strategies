@@ -22,9 +22,9 @@ def fetch_ohlcv_data(file_path):
     # Floor the index to minute precision (ignoring seconds)
     ohlcv_data.index = ohlcv_data.index.floor('min')
 
-    ohlcv_data = ohlcv_data[(ohlcv_data.index >= start_date) & (ohlcv_data.index <= end_date)]
+    f_ohlcv_data = ohlcv_data[(ohlcv_data.index >= start_date) & (ohlcv_data.index <= end_date)]
 
-    return ohlcv_data
+    return f_ohlcv_data
 
 # Main logic to process liquidation data and check conditions
 def backtest_all_trades(start_date, end_date, timeframe, starting_equity):
