@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 from binance.client import Client
 import datetime
 import streamlit as st
+import time
 
 
 # Fetch OHLCV data from Binance
@@ -247,4 +248,11 @@ if st.button('Run Backtest'):
 
     # Plot the equity curve
     plot_equity_curve(equity_history)
+
+start_time = time.time()
+while True:
+    elapsed_time = time.time() - start_time
+    if elapsed_time >= 30:
+        st.stop()
+    time.sleep(1)
 
