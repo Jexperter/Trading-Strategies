@@ -6,10 +6,6 @@ from binance.client import Client
 import datetime
 import streamlit as st
 
-# Initialize Binance Client (use your API key and secret)
-api_key = st.secrets["general"]["API_KEY_BINANCE"]
-api_secret = st.secrets["general"]["API_SECRET_BINANCE"]
-client = Client(api_key, api_secret)
 
 # Fetch OHLCV data from Binance
 def fetch_ohlcv_data(file_path):
