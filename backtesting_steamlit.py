@@ -20,7 +20,7 @@ def fetch_ohlcv_data(file_path):
     ohlcv_data[['Open', 'High', 'Low', 'Close', 'Volume']] = ohlcv_data[['Open', 'High', 'Low', 'Close', 'Volume']].astype(float)
 
     # Floor the index to minute precision (ignoring seconds)
-    ohlcv_data.index = ohlcv_data.index.floor('T')
+    ohlcv_data.index = ohlcv_data.index.floor('min')
 
     return ohlcv_data
 
@@ -44,7 +44,7 @@ def backtest_all_trades(start_date, end_date, timeframe, starting_equity):
 
     
     # Floor liquidation time to minutes (ignoring seconds)
-    liquidation_data['Datetime'] = liquidation_data['Datetime'].dt.floor('T')
+    liquidation_data['Datetime'] = liquidation_data['Datetime'].dt.floor('min')
 
     # Fetch OHLCV data from Binance for the specified period and timeframe
     ohlcv_data = fetch_ohlcv_data('BTCUSDT_1m_02_Feb,_2023_to_13_Mar,_2023.csv')
@@ -72,7 +72,7 @@ def backtest_all_trades(start_date, end_date, timeframe, starting_equity):
         open_trade = None
 
         for index, liquidation in liquidation_data_filtered.iterrows():
-            liquidation_time = liquidation['Datetime'].floor('T')
+            liquidation_time = liquidation['Datetime'].floor('min')
 
             if liquidation_time in ohlcv_data.index:
                 liquidation_candle = ohlcv_data.loc[liquidation_time]
@@ -240,6 +240,6 @@ starting_equity = st.number_input("Enter Starting Equity (Minimum $100,000)", mi
 if st.button('Run Backtest'):
     trades_df, final_equity, equity_history, total_return_percentage = backtest_all_trades(start_date, end_date, Client.KLINE_INTERVAL_1MINUTE, starting_equity)
     
-    plot_trades_with_plotly(fetch_ohlcv_data('BTCUSDT', Client.KLINE_INTERVAL_1MINUTE, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')), trades_df)
+    plot_trades_with_plotly(fetch_ohlcv_data('BTCUSDT_1m_02_Feb,_2023_to_13_Mar,_2023.csv'))
 
     plot_equity_curve(equity_history)
