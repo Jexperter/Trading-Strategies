@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import os
 import plotly.graph_objects as go
 from binance.client import Client
 import datetime
@@ -219,9 +218,8 @@ def plot_equity_curve(equity_history):
 st.title('Liquidation-Based Backtesting Strategy')
 
 st.write("""
-## Strategy Description
-This strategy takes trades based on liquidation data. It opens trades after a certain amount of liquidation occurs and closes when the opposite liquidation occurs. 
-For testing purposes, I have a small sample of liquidation data.
+This strategy executes trades based on liquidation data, initiating positions after a specified level of liquidation occurs and closing them upon the occurrence of opposing liquidation events. 
+For testing purposes, I have prepared a small sample of liquidation data
 """)
 
 # Set the minimum and maximum dates for selection
